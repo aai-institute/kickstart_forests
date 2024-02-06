@@ -4,8 +4,13 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn import linear_model
+from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error
 
 # Target Column
 COL_LEAF_AREA_INDEX = "lai"
@@ -65,34 +70,39 @@ class Dataset:
         df = self.load_data_frame()
         return df.drop(columns=COL_LEAF_AREA_INDEX), df[COL_LEAF_AREA_INDEX]
 
+
+class ModelFactory:
+    COLS_USED_BY_ORIGINAL_MODELS = [COL_WETNESS, *COL_SENTINEL_VALUES]
+
+    @classmethod
+    def create_logistic_regression_orig(cls):
+        return Pipeline([
+            ("project_scale", ColumnTransformer([("scaler", StandardScaler(), cls.COLS_USED_BY_ORIGINAL_MODELS)])),
+            ("model", linear_model.LinearRegression())])
+
+    @classmethod
+    def create_random_forest_orig(cls):
+        return Pipeline([
+            ("project_scale", ColumnTransformer([("scaler", StandardScaler(), cls.COLS_USED_BY_ORIGINAL_MODELS)])),
+            ("model", RandomForestRegressor(n_estimators=100))])
+
 if __name__ == '__main__':
 
     dataset = Dataset()
     X, y = dataset.load_xy()
 
-    # project to columns used by models
-    cols_used_by_models = [COL_WETNESS, *COL_SENTINEL_VALUES]
-    X = X[cols_used_by_models]
-
     X_train, X_test, y_train, y_test = train_test_split(X,y, random_state=42)
 
-    m = LinearRegression()
+    models = [
+        ModelFactory.create_logistic_regression_orig(),
+        ModelFactory.create_random_forest_orig(),
+    ]
 
-    m.fit(X_train, y_train)
-
-    m.score(X_train, y_train)
-
-    lin_reg = m.score(X_test, y_test)
-
-    print(f"Linear Regression Score:{lin_reg}")
-
-    rf = RandomForestRegressor()
-
-    rf.fit(X_train, y_train)
-
-    rf.score(X_train, y_train)
-    
-    rf_score = rf.score(X_test, y_test)
-
-    print(f"Random Forest Score:{rf_score}")
+    # evaluate models
+    for model in models:
+        print(f"Evaluating model:\n{model}")
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        print(f'R2_score: {r2_score(y_test, y_pred)}')
+        print(f'MSE: {mean_squared_error(y_test, y_pred)}')
 
