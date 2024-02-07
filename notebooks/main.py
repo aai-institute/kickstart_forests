@@ -116,7 +116,7 @@ class Dataset:
             wetness_features = df.loc[:, COL_WETNESS].values
             wetness_features = np.expand_dims(wetness_features, axis=1)
             embeddings = np.concatenate((embeddings, wetness_features), axis=1)
-            return embeddings, np.expand_dims(df[COL_LEAF_AREA_INDEX].values, axis=1)
+            return embeddings, df[COL_LEAF_AREA_INDEX].values
         else:
             return df.drop(columns=COL_LEAF_AREA_INDEX), df[COL_LEAF_AREA_INDEX]
 
